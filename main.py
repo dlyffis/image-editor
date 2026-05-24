@@ -46,6 +46,7 @@ class ImageRuler:
         self.image = None
         self.filename = None
         self.story = []
+        self.story_index = -1 
 
     def load_image(self, filename):
         self.filename = filename
@@ -53,15 +54,41 @@ class ImageRuler:
         self.image = Image.open(path)
     
     def save_image(self):
+        self.story = self.story[:self.story_index + 1]
+
         path = os.path.join(directory, 'modified')
         if not os.path.exists(path):
             os.mkdir(path) # создаем папку
         
         index = self.filename.rfind('.') # наоброт справа налево
-        image_name = self.filename[:index] + '-new' + self.filename[index:]
+        image_name = self.filename[:index] + '-'+ str(len(self.story)) + self.filename[index:]
         filename = os.path.join(path, image_name)
+        self.story.append(filename)
+        self.story_index =+ 1 
         self.image.save(os.path.join(path, image_name))
         set_picture(filename)
+
+    def back(self):
+        if self.story_index == 0:
+            self.story_index -= 1 
+            path = os.path.join(directory, self.filename)
+            set_picture(path)
+            self.image = Image.open(path)
+        
+        if self.story_index < 1:
+            return
+        
+        self.story_index -= 1 
+        set_picture(self.story[self.story_index])
+        self.image = Image.open(self.story[self.story_index]) 
+
+    def forward(self):
+        if self.story_index + 1 < len(self.story):
+            self.story_index += 1 
+            set_picture(self.story[self.story_index])
+            self.image = Image.open(self.story[self.story_index]) 
+
+
 
     def rotate_left(self):
         if self.image is None:
@@ -81,9 +108,18 @@ class ImageRuler:
         self.image =self.image.convert('L')
         self.save_image()
     
-    def do_contract(self):
-        ...
+    def do_sharpness(self):
+        if self.image is None:
+            return
+        self.image =ImageEnhance.Sharpness(self.image).enhance(3)
+        self.save_image()
 
+
+    def mirrored(self):
+        if self.image is None:
+            return
+        self.image =self.image.transpose(Image.FLIP_LEFT_RIGHT)
+        self.save_image()
 
 image_ruler = ImageRuler()
 directory = None
@@ -124,30 +160,41 @@ pic_list = QListWidget()
 pic_list.itemClicked.connect(show_image)
 label = QLabel('Картинка')
 
+
+b_back = QPushButton('Назад')
+b_back.clicked.connect(image_ruler.back)
+
 b_left = QPushButton('Лево')
 b_left.clicked.connect(image_ruler.rotate_left)
 b_right = QPushButton('Право')
 b_right.clicked.connect(image_ruler.rotate_right)
 b_mirror = QPushButton('Зеркало')
-b_contrast = QPushButton('Резкость')
-b_contrast.clicked.connect(image_ruler.do_contract)
+b_mirror.clicked.connect(image_ruler.mirrored)
+b_sharpness = QPushButton('Резкость')
+b_sharpness.clicked.connect(image_ruler.do_sharpness)
 b_black_white = QPushButton('Ч/Б')
 b_black_white.clicked.connect(image_ruler.do_black_white)
 
+b_forward = QPushButton('Вперед')
+b_forward.clicked.connect(image_ruler.forward)
+
 b_file = QPushButton('Папка')
 b_file.clicked.connect(chooseWorkDirectory)
+
+
 
 main_line = QHBoxLayout()
 line_button = QHBoxLayout()
 vline1 = QVBoxLayout()
 vline2 = QVBoxLayout()
 
+line_button.addWidget(b_back)
 line_button.addWidget(b_left)
 line_button.addWidget(b_right)
 line_button.addWidget(b_mirror)
-line_button.addWidget(b_contrast)
+line_button.addWidget(b_sharpness)
 line_button.addWidget(b_black_white)
-
+line_button.addWidget(b_forward)
 
 vline1.addWidget(b_file)
 vline1.addWidget(pic_list)
